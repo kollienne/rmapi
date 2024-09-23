@@ -30,9 +30,9 @@ func prefixToDir(s []string) string {
 		if fstat.IsDir() {
 			if strings.HasSuffix(prefix, "/") {
 				return prefix
-			} else {
-				return path.Dir(prefix)
 			}
+
+			return path.Dir(prefix)
 		}
 	}
 
