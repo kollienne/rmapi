@@ -2,7 +2,7 @@ package shell
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path"
 	"strings"
@@ -57,18 +57,18 @@ func prefixToDir(s []string) string {
 	return dir
 }
 
-type fileCheckFn func(os.FileInfo) bool
+type fileCheckFn func(fs.DirEntry) bool
 
 func createFsDirCompleter(ctx *ShellCtxt) func([]string) []string {
-	return createFsCompleter(func(e os.FileInfo) bool { return e.IsDir() })
+	return createFsCompleter(func(e fs.DirEntry) bool { return e.IsDir() })
 }
 
 func createFsFileCompleter(ctx *ShellCtxt) func([]string) []string {
-	return createFsCompleter(func(e os.FileInfo) bool { return !e.IsDir() })
+	return createFsCompleter(func(e fs.DirEntry) bool { return !e.IsDir() })
 }
 
 func createFsEntryCompleter() func([]string) []string {
-	return createFsCompleter(func(e os.FileInfo) bool { return true })
+	return createFsCompleter(func(e fs.DirEntry) bool { return true })
 }
 
 func createFsCompleter(check fileCheckFn) func([]string) []string {
@@ -83,7 +83,7 @@ func createFsCompleter(check fileCheckFn) func([]string) []string {
 			return options
 		}
 
-		entries, err := ioutil.ReadDir(dir)
+		entries, err := os.ReadDir(dir)
 
 		if err != nil {
 			return options

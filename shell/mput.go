@@ -2,8 +2,8 @@ package shell
 
 import (
 	"errors"
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -17,22 +17,25 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 		Help:      "recursively copy local files to remote directory",
 		Completer: createFsEntryCompleter(),
 		Func: func(c *ishell.Context) {
+			flagSet := flag.NewFlagSet("mput", flag.ContinueOnError)
+			directory := flagSet.String("src", "./", "directory")
 
-			argsLen := len(c.Args)
-
-			if argsLen == 0 {
-				c.Err(errors.New(("missing destination dir")))
+			if err := flagSet.Parse(c.Args); err != nil {
+				if err != flag.ErrHelp {
+					c.Err(err)
+				}
 				return
 			}
 
-			if argsLen > 1 {
-				c.Err(errors.New(("too many arguments for command mput")))
+			argRest := flagSet.Args()
+			if len(argRest) == 0 {
+				c.Err(errors.New(("missing destination dir")))
 				return
 			}
 
 			// Past this point, the number of arguments is 1.
 
-			node, err := ctx.api.Filetree().NodeByPath(c.Args[0], ctx.node)
+			node, err := ctx.api.Filetree().NodeByPath(argRest[0], ctx.node)
 
 			if err != nil || node.IsFile() {
 				c.Err(errors.New("remote directory does not exist"))
@@ -56,7 +59,7 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 			ctx.node = node
 
 			c.Println()
-			err = putFilesAndDirs(ctx, c, "./", 0, &treeFormatStr)
+			err = putFilesAndDirs(ctx, c, *directory, 0, &treeFormatStr)
 			if err != nil {
 				c.Err(err)
 			}
@@ -120,7 +123,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 	os.Chdir(localDir) // Change to the local source directory.
 
 	wd, _ := os.Getwd()
-	dirList, err := ioutil.ReadDir(wd)
+	dirList, err := os.ReadDir(wd)
 
 	if err != nil {
 		pC.Err(fmt.Errorf("could not read the directory: %s", wd))
@@ -135,9 +138,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			continue
 		}
 
-		switch mode := d.Mode(); {
-		case mode.IsDir():
-
+		if d.IsDir() {
 			// Is a directory. Create directory and make a recursive call.
 			_, err := pCtx.api.Filetree().NodeByPath(name, pCtx.node)
 
@@ -181,9 +182,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			// Reset.
 			pCtx.path = currCtxPath
 			pCtx.node = currCtxNode
-
-		case mode.IsRegular():
-
+		} else if d.Type().IsRegular() {
 			docName, ext := util.DocPathToName(name)
 
 			if !util.IsFileTypeSupported(ext) {

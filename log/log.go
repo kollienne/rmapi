@@ -2,7 +2,6 @@ package log
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 )
@@ -43,8 +42,8 @@ func init() {
 }
 
 func InitLog() {
-	info := ioutil.Discard
-	trace := ioutil.Discard
+	info := io.Discard
+	trace := io.Discard
 	traceRmapi := os.Getenv("RMAPI_TRACE")
 	switch traceRmapi {
 	case "1":

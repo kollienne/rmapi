@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/juruen/rmapi/archive"
@@ -69,7 +68,7 @@ func (ctx *ApiCtx) FetchDocument(docId, dstPath string) error {
 
 	blobUrl := documents[0].BlobURLGet
 
-	src, err := ctx.Http.GetStream(transport.UserBearer, blobUrl)
+	src, err := ctx.Http.GetStream(transport.UserBearer, blobUrl, docId)
 
 	if src != nil {
 		defer src.Close()
@@ -80,7 +79,7 @@ func (ctx *ApiCtx) FetchDocument(docId, dstPath string) error {
 		return err
 	}
 
-	dst, err := ioutil.TempFile("", "rmapifile")
+	dst, err := os.CreateTemp("", "rmapifile")
 
 	if err != nil {
 		log.Error.Println("failed to create temp fail to download blob")
@@ -136,7 +135,7 @@ func (ctx *ApiCtx) CreateDir(parentId, name string, notify bool) (*model.Documen
 
 	defer f.Close()
 
-	err = ctx.Http.PutStream(transport.UserBearer, uploadRsp.BlobURLPut, f)
+	err = ctx.Http.PutStream(transport.UserBearer, uploadRsp.BlobURLPut, f, uploadRsp.ID)
 
 	if err != nil {
 		log.Error.Println("failed to upload directory", err)
@@ -253,7 +252,7 @@ func (ctx *ApiCtx) UploadDocument(parentId string, sourceDocPath string, notify 
 		return nil, err
 	}
 
-	err = ctx.Http.PutStream(transport.UserBearer, uploadRsp.BlobURLPut, f)
+	err = ctx.Http.PutStream(transport.UserBearer, uploadRsp.BlobURLPut, f, id)
 
 	if err != nil {
 		log.Error.Println("failed to upload zip document", err)

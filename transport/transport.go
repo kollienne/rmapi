@@ -1,14 +1,15 @@
 package transport
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,8 @@ type BodyString struct {
 
 var ErrUnauthorized = errors.New("401 Unauthorized")
 var ErrConflict = errors.New("409 Conflict")
+var ErrWrongGeneration = errors.New("412 wrong generation")
+var ErrNotFound = errors.New("not found")
 
 var RmapiUserAGent = "rmapi"
 
@@ -72,7 +75,7 @@ func (ctx HttpClientCtx) Get(authType AuthType, url string, body interface{}, ta
 		return err
 	}
 
-	response, err := ctx.Request(authType, http.MethodGet, url, bodyReader)
+	response, err := ctx.Request(authType, http.MethodGet, url, bodyReader, nil, 0)
 
 	if response != nil {
 		defer response.Body.Close()
@@ -85,8 +88,13 @@ func (ctx HttpClientCtx) Get(authType AuthType, url string, body interface{}, ta
 	return json.NewDecoder(response.Body).Decode(target)
 }
 
-func (ctx HttpClientCtx) GetStream(authType AuthType, url string) (io.ReadCloser, error) {
-	response, err := ctx.Request(authType, http.MethodGet, url, strings.NewReader(""))
+const RmFileNameHeader = "rm-filename"
+
+func (ctx HttpClientCtx) GetStream(authType AuthType, url string, name string) (io.ReadCloser, error) {
+	headers := map[string]string{
+		RmFileNameHeader: name,
+	}
+	response, err := ctx.Request(authType, http.MethodGet, url, strings.NewReader(""), headers, 0)
 
 	var respBody io.ReadCloser
 	if response != nil {
@@ -97,23 +105,53 @@ func (ctx HttpClientCtx) GetStream(authType AuthType, url string) (io.ReadCloser
 }
 
 func (ctx HttpClientCtx) Post(authType AuthType, url string, reqBody, resp interface{}) error {
-	return ctx.httpRawReq(authType, http.MethodPost, url, reqBody, resp)
+	return ctx.httpRawReq(authType, http.MethodPost, url, reqBody, resp, nil)
 }
 
 func (ctx HttpClientCtx) Put(authType AuthType, url string, reqBody, resp interface{}) error {
-	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, resp)
+	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, resp, nil)
 }
 
-func (ctx HttpClientCtx) PutStream(authType AuthType, url string, reqBody io.Reader) error {
-	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, nil)
+func (ctx HttpClientCtx) PutStream(authType AuthType, url string, reqBody io.Reader, name string) error {
+	headers := map[string]string{
+		RmFileNameHeader: name,
+	}
+	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, nil, headers)
 }
 
 func (ctx HttpClientCtx) Delete(authType AuthType, url string, reqBody, resp interface{}) error {
-	return ctx.httpRawReq(authType, http.MethodDelete, url, reqBody, resp)
+	return ctx.httpRawReq(authType, http.MethodDelete, url, reqBody, resp, nil)
 }
 
-func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody, resp interface{}) error {
+var table = crc32.MakeTable(crc32.Castagnoli)
+
+func generateCRC32CFromReader(reader io.Reader) (string, error) {
+	// Create a table for CRC32C (Castagnoli polynomial)
+	// Create a CRC32C hasher
+	crc32c := crc32.New(table)
+
+	// Copy the reader data into the hasher
+	if _, err := io.Copy(crc32c, reader); err != nil {
+		return "", err
+	}
+
+	// Compute the CRC32C checksum
+	checksum := crc32c.Sum32()
+
+	// Convert the checksum to a byte array
+	crcBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(crcBytes, checksum)
+	encodedChecksum := base64.StdEncoding.EncodeToString(crcBytes)
+
+	return encodedChecksum, nil
+}
+
+func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody, resp interface{}, headers map[string]string) error {
 	var contentBody io.Reader
+
+	if headers == nil {
+		headers = map[string]string{}
+	}
 
 	switch reqBody.(type) {
 	case io.Reader:
@@ -129,7 +167,25 @@ func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody
 		contentBody = c
 	}
 
-	response, err := ctx.Request(authType, verb, url, contentBody)
+	// calculate crc32c for google and set length
+	var length int64
+	if seeker, ok := contentBody.(io.ReadSeeker); ok {
+		crc, err := generateCRC32CFromReader(seeker)
+		if err != nil {
+			return err
+		}
+		headers["x-goog-hash"] = "crc32c=" + crc
+		length, err = seeker.Seek(0, io.SeekCurrent)
+		if err != nil {
+			return fmt.Errorf("cannot get content length")
+		}
+		// headers["Content-Length"] = strconv.FormatInt(length, 10)
+		_, err = seeker.Seek(0, io.SeekStart)
+		if err != nil {
+			return fmt.Errorf("cannot seek %v", err)
+		}
+	}
+	response, err := ctx.Request(authType, verb, url, contentBody, headers, length)
 
 	if response != nil {
 		defer response.Body.Close()
@@ -146,7 +202,7 @@ func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody
 
 	switch resp.(type) {
 	case *BodyString:
-		bodyContent, err := ioutil.ReadAll(response.Body)
+		bodyContent, err := io.ReadAll(response.Body)
 
 		if err != nil {
 			return err
@@ -164,19 +220,27 @@ func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody
 	return nil
 }
 
-func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Reader) (*http.Response, error) {
+func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Reader, headers map[string]string, length int64) (*http.Response, error) {
 	request, err := http.NewRequest(verb, url, body)
 	if err != nil {
 		return nil, err
 	}
 
 	ctx.addAuthorization(request, authType)
-	request.Header.Add("User-Agent", RmapiUserAGent)
+	request.Header["user-agent"] = []string{RmapiUserAGent}
 
+	if headers != nil {
+		for k, v := range headers {
+			request.Header[k] = []string{v}
+		}
+	}
+
+	log.Trace.Println("---- start")
 	if log.TracingEnabled {
 		drequest, err := httputil.DumpRequest(request, true)
 		log.Trace.Printf("request: %s %v", string(drequest), err)
 	}
+	request.ContentLength = length
 
 	response, err := ctx.Client.Do(request)
 
@@ -191,9 +255,10 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 		log.Trace.Printf("%s %v", string(dresponse), err)
 	}
 
-	if response.StatusCode != 200 {
+	if response.StatusCode != http.StatusOK {
 		log.Trace.Printf("request failed with status %d\n", response.StatusCode)
 	}
+	log.Trace.Println("---- end")
 
 	switch response.StatusCode {
 	case http.StatusOK:
@@ -202,138 +267,9 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 		return response, ErrUnauthorized
 	case http.StatusConflict:
 		return response, ErrConflict
+	case http.StatusPreconditionFailed:
+		return response, ErrWrongGeneration
 	default:
 		return response, fmt.Errorf("request failed with status %d", response.StatusCode)
 	}
-}
-
-func (ctx HttpClientCtx) GetBlobStream(url string) (io.ReadCloser, int64, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, 0, err
-	}
-	client := &http.Client{}
-	response, err := client.Do(req)
-
-	if err != nil {
-		return nil, 0, err
-	}
-	if response.StatusCode == http.StatusNotFound {
-		return nil, 0, ErrNotFound
-	}
-	if response.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("GetBlobStream, status code not ok %d", response.StatusCode)
-	}
-	var gen int64
-	if response.Header != nil {
-		genh := response.Header.Get(HeaderGeneration)
-		if genh != "" {
-			log.Trace.Println("got generation header: ", genh)
-			gen, err = strconv.ParseInt(genh, 10, 64)
-		}
-	}
-
-	return response.Body, gen, err
-}
-
-// those headers are case sensitive
-const HeaderGeneration = "x-goog-generation"
-const HeaderContentLengthRange = "x-goog-content-length-range"
-const HeaderGenerationIfMatch = "x-goog-if-generation-match"
-
-const HeaderContentMD5 = "Content-MD5"
-
-var ErrWrongGeneration = errors.New("wrong generation")
-var ErrNotFound = errors.New("not found")
-
-func addSizeHeader(req *http.Request, maxRequestSize int64) {
-	if maxRequestSize > 0 {
-		//don't change the header case, signed headers
-		req.Header[HeaderContentLengthRange] = []string{fmt.Sprintf("0,%d", maxRequestSize)}
-	}
-}
-func addGenerationMatchHeader(req *http.Request, gen int64) {
-	if gen > 0 {
-		req.Header[HeaderGenerationIfMatch] = []string{strconv.FormatInt(gen, 10)}
-	}
-}
-
-func (ctx HttpClientCtx) PutRootBlobStream(url string, gen, maxRequestSize int64, reader io.Reader) (newGeneration int64, err error) {
-	req, err := http.NewRequest(http.MethodPut, url, reader)
-	if err != nil {
-		return
-	}
-	req.Header.Add("User-Agent", RmapiUserAGent)
-	addGenerationMatchHeader(req, gen)
-	addSizeHeader(req, maxRequestSize)
-
-	if log.TracingEnabled {
-		drequest, err := httputil.DumpRequest(req, true)
-		log.Trace.Printf("PutRootBlobStream: %s %v", string(drequest), err)
-	}
-	client := &http.Client{}
-	response, err := client.Do(req)
-	if err != nil {
-		return
-	}
-
-	if log.TracingEnabled {
-		defer response.Body.Close()
-		dresponse, err := httputil.DumpResponse(response, true)
-		log.Trace.Printf("PutRootBlobStream:Response: %s %v", string(dresponse), err)
-	}
-
-	if response.StatusCode == http.StatusPreconditionFailed {
-		return 0, ErrWrongGeneration
-	}
-	if response.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("PutRootBlobStream: got status code %d", response.StatusCode)
-	}
-
-	if response.Header == nil {
-		return 0, fmt.Errorf("PutRootBlobStream: no response headers")
-	}
-	generationHeader := response.Header.Get(HeaderGeneration)
-	if generationHeader == "" {
-		log.Warning.Println("no new generation header")
-		return
-	}
-
-	log.Trace.Println("new generation header: ", generationHeader)
-	newGeneration, err = strconv.ParseInt(generationHeader, 10, 64)
-	if err != nil {
-		log.Error.Print(err)
-	}
-
-	return
-}
-func (ctx HttpClientCtx) PutBlobStream(url string, reader io.Reader, maxRequestSize int64) (err error) {
-	req, err := http.NewRequest(http.MethodPut, url, reader)
-	if err != nil {
-		return
-	}
-	req.Header.Add("User-Agent", RmapiUserAGent)
-	addSizeHeader(req, maxRequestSize)
-
-	if log.TracingEnabled {
-		drequest, err := httputil.DumpRequest(req, true)
-		log.Trace.Printf("PutBlobStream: %s %v", string(drequest), err)
-	}
-	client := &http.Client{}
-	response, err := client.Do(req)
-	if err != nil {
-		return
-	}
-
-	if log.TracingEnabled {
-		defer response.Body.Close()
-		dresponse, err := httputil.DumpResponse(response, true)
-		log.Trace.Printf("PutBlobSteam: Response: %s %v", string(dresponse), err)
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("PutBlobStream: got status code %d", response.StatusCode)
-	}
-
-	return nil
 }

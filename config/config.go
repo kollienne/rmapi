@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -65,7 +64,7 @@ func LoadTokens(path string) model.AuthTokens {
 		return tokens
 	}
 
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 
 	if err != nil {
 		log.Warning.Printf("failed to open %s with %s/n", path, err)
@@ -88,7 +87,7 @@ func SaveTokens(path string, tokens model.AuthTokens) {
 		log.Warning.Println("failed to marsha tokens", err)
 	}
 
-	ioutil.WriteFile(path, content, 0600)
+	os.WriteFile(path, content, 0600)
 
 	if err != nil {
 		log.Warning.Println("failed to save config to", path)

@@ -1,7 +1,7 @@
 package sync15
 
 import (
-	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -27,14 +27,13 @@ const ROOT_NAME = "root"
 func (b *BlobStorage) PutRootUrl(hash string, gen int64) (string, int64, error) {
 	log.Trace.Println("fetching  ROOT url for: " + hash)
 	req := model.BlobRootStorageRequest{
-		Method:       http.MethodPut,
-		RelativePath: ROOT_NAME,
-		RootSchema:   hash,
-		Generation:   gen,
+		Broadcast:  true, //TODO
+		Hash:       hash,
+		Generation: gen,
 	}
 	var res model.BlobStorageResponse
 
-	if err := b.http.Post(transport.UserBearer, config.UploadBlob, req, &res); err != nil {
+	if err := b.http.Post(transport.UserBearer, config.RootPut, req, &res); err != nil {
 		return "", 0, err
 	}
 	return res.Url, res.MaxUploadSizeBytes, nil
@@ -63,65 +62,53 @@ func (b *BlobStorage) GetUrl(hash string) (string, error) {
 	return res.Url, nil
 }
 
-func (b *BlobStorage) GetReader(hash string) (io.ReadCloser, error) {
-	url, err := b.GetUrl(hash)
-	if err != nil {
-		return nil, err
-	}
-	log.Trace.Println("get url: " + url)
-
-	blob, _, err := b.http.GetBlobStream(url)
-	return blob, err
+func (b *BlobStorage) GetReader(hash, filename string) (io.ReadCloser, error) {
+	return b.http.GetStream(transport.UserBearer, config.BlobUrl+hash, filename)
 }
 
-func (b *BlobStorage) UploadBlob(hash string, reader io.Reader) error {
-	url, size, err := b.PutUrl(hash)
-	if err != nil {
-		return err
-	}
-	log.Trace.Println("put url: " + url)
+func (b *BlobStorage) UploadBlob(hash, filename string, reader io.Reader) error {
+	log.Trace.Println("uploading blob ", filename)
 
-	return b.http.PutBlobStream(url, reader, size)
+	return b.http.PutStream(transport.UserBearer, config.BlobUrl+hash, reader, filename)
 }
 
 // SyncComplete notifies that the sync is done
 func (b *BlobStorage) SyncComplete(gen int64) error {
-	req := model.SyncCompletedRequest{
-		Generation: gen,
-	}
-	return b.http.Post(transport.UserBearer, config.SyncComplete, req, nil)
+	log.Info.Println("TODO: sync in root")
+	return nil
+	// req := model.SyncCompletedRequest{
+	// 	Generation: gen,
+	// }
+	// return b.http.Post(transport.UserBearer, config.SyncComplete, req, nil)
 }
 
 func (b *BlobStorage) WriteRootIndex(roothash string, gen int64) (int64, error) {
 	log.Info.Println("writing root with gen: ", gen)
-	url, maxRequestSize, err := b.PutRootUrl(roothash, gen)
+	req := model.BlobRootStorageRequest{
+		Broadcast:  true, //TODO
+		Hash:       roothash,
+		Generation: gen,
+	}
+	var res model.BlobRootStorageResponse
+
+	err := b.http.Put(transport.UserBearer, config.RootPut, req, &res)
 	if err != nil {
 		return 0, err
 	}
-	log.Trace.Println("got root url:", url)
-	reader := bytes.NewBufferString(roothash)
+	if res.Hash != roothash {
+		return 0, fmt.Errorf("hash mismatch")
+	}
 
-	return b.http.PutRootBlobStream(url, gen, maxRequestSize, reader)
+	return res.Generation, nil
 }
 func (b *BlobStorage) GetRootIndex() (string, int64, error) {
-	url, err := b.GetUrl(ROOT_NAME)
+	var res model.BlobRootStorageResponse
+	err := b.http.Get(transport.UserBearer, config.RootGet, nil, &res)
 	if err != nil {
 		return "", 0, err
 	}
-	log.Info.Println("got root get url:", url)
-	blob, gen, err := b.http.GetBlobStream(url)
-	if err == transport.ErrNotFound {
-		return "", 0, nil
 
-	}
-	if err != nil {
-		return "", 0, err
-	}
-	content, err := io.ReadAll(blob)
-	if err != nil {
-		return "", 0, err
-	}
-	log.Info.Println("got root gen:", gen)
-	return string(content), gen, nil
+	log.Info.Println("got root gen:", res.Generation)
+	return res.Hash, res.Generation, nil
 
 }

@@ -2,6 +2,7 @@ package sync15
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -97,21 +98,16 @@ func parseIndex(f io.Reader) ([]*Entry, error) {
 	return entries, nil
 }
 
-func (t *HashTree) IndexReader() (io.ReadCloser, error) {
-	pipeReader, pipeWriter := io.Pipe()
-	w := bufio.NewWriter(pipeWriter)
-	go func() {
-		defer pipeWriter.Close()
-		w.WriteString(SchemaVersion)
+func (t *HashTree) IndexReader() (io.Reader, error) {
+	var w bytes.Buffer
+	w.WriteString(SchemaVersion)
+	w.WriteString("\n")
+	for _, d := range t.Docs {
+		w.WriteString(d.Line())
 		w.WriteString("\n")
-		for _, d := range t.Docs {
-			w.WriteString(d.Line())
-			w.WriteString("\n")
-		}
-		w.Flush()
-	}()
+	}
 
-	return pipeReader, nil
+	return bytes.NewReader(w.Bytes()), nil
 }
 
 type HashTree struct {
@@ -165,6 +161,10 @@ func (t *HashTree) Rehash() error {
 	return nil
 }
 
+func addSchema(name string) string {
+	return name + ".docSchema"
+}
+
 // / Mirror makes the tree look like the storage
 func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 	rootHash, gen, err := r.GetRootIndex()
@@ -183,7 +183,7 @@ func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 	}
 	log.Info.Printf("remote root hash different")
 
-	rootIndexReader, err := r.GetReader(rootHash)
+	rootIndexReader, err := r.GetReader(rootHash, addSchema("root"))
 	if err != nil {
 		return fmt.Errorf("cannot get root hash %v", err)
 	}
@@ -266,7 +266,7 @@ func BuildTree(provider RemoteStorage) (*HashTree, error) {
 	tree.Hash = rootHash
 	tree.Generation = gen
 
-	rootIndex, err := provider.GetReader(rootHash)
+	rootIndex, err := provider.GetReader(rootHash, "roothash")
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func BuildTree(provider RemoteStorage) (*HashTree, error) {
 	entries, _ := parseIndex(rootIndex)
 
 	for _, e := range entries {
-		f, _ := provider.GetReader(e.Hash)
+		f, _ := provider.GetReader(e.Hash, e.DocumentID)
 		defer f.Close()
 
 		doc := &BlobDoc{}

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -77,7 +76,7 @@ func (z *Zip) readContent(zr *zip.Reader) error {
 	}
 	defer file.Close()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := io.ReadAll(file)
 	if err != nil {
 		return err
 	}
@@ -171,7 +170,7 @@ func (z *Zip) readPayload(zr *zip.Reader) error {
 	}
 	defer file.Close()
 
-	z.Payload, err = ioutil.ReadAll(file)
+	z.Payload, err = io.ReadAll(file)
 	if err != nil {
 		return err
 	}
@@ -203,7 +202,7 @@ func (z *Zip) readData(zr *zip.Reader) error {
 			return err
 		}
 
-		bytes, err := ioutil.ReadAll(r)
+		bytes, err := io.ReadAll(r)
 		if err != nil {
 			return err
 		}
@@ -242,7 +241,7 @@ func (z *Zip) readThumbnails(zr *zip.Reader) error {
 			return err
 		}
 
-		z.Pages[idx].Thumbnail, err = ioutil.ReadAll(r)
+		z.Pages[idx].Thumbnail, err = io.ReadAll(r)
 		if err != nil {
 			return err
 		}
@@ -299,7 +298,7 @@ func (z *Zip) readMetadata(zr *zip.Reader) error {
 			return err
 		}
 
-		bytes, err := ioutil.ReadAll(r)
+		bytes, err := io.ReadAll(r)
 		if err != nil {
 			return err
 		}

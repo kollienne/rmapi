@@ -13,6 +13,10 @@ var UploadBlob string
 var DownloadBlob string
 var SyncComplete string
 
+var RootGet string
+var RootPut string
+var BlobUrl string
+
 func init() {
 	docHost := "https://document-storage-production-dot-remarkable-production.appspot.com"
 	authHost := "https://webapp-prod.cloud.remarkable.engineering"
@@ -46,4 +50,9 @@ func init() {
 	UploadBlob = syncHost + "/sync/v2/signed-urls/uploads"
 	DownloadBlob = syncHost + "/sync/v2/signed-urls/downloads"
 	SyncComplete = syncHost + "/sync/v2/sync-complete"
+
+	// v3
+	BlobUrl = syncHost + "/sync/v3/files/"
+	RootGet = syncHost + "/sync/v4/root"
+	RootPut = syncHost + "/sync/v3/root"
 }

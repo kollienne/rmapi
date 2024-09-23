@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,7 +18,7 @@ func TestSaveLoadConfig(t *testing.T) {
 		UserToken:   "bar",
 	}
 
-	f, err := ioutil.TempFile("", "rmapitmp")
+	f, err := os.CreateTemp("", "rmapitmp")
 
 	if err != nil {
 		panic(fmt.Sprintln("failed to create temp file"))
@@ -77,7 +76,7 @@ func TestConfigPath(t *testing.T) {
 			name: "home config exists",
 			setup: func() {
 				homeConfig := filepath.Join(os.TempDir(), defaultConfigFile)
-				if err := ioutil.WriteFile(homeConfig, []byte("test"), 0644); err != nil {
+				if err := os.WriteFile(homeConfig, []byte("test"), 0644); err != nil {
 					t.Error(err)
 				}
 			},

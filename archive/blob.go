@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -92,7 +91,7 @@ func Prepare(name, parentId, sourceDocPath, ext, tmpDir string) (files *Document
 // FixMetadata fixes the metadata with the new parent and filename
 func FixMetadata(parentId, name, path string) error {
 	meta := MetadataFile{}
-	metaData, err := ioutil.ReadFile(path)
+	metaData, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ func FixMetadata(parentId, name, path string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, metaData, 0600)
+	return os.WriteFile(path, metaData, 0600)
 }
 
 // Unpack unpacks a rmapi .zip file

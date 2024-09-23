@@ -1,7 +1,6 @@
 package sync15
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -88,24 +87,19 @@ func (t *HashTree) Add(d *BlobDoc) error {
 	return t.Rehash()
 }
 
-func (d *BlobDoc) IndexReader() (io.ReadCloser, error) {
+func (d *BlobDoc) IndexReader() (io.Reader, error) {
 	if len(d.Files) == 0 {
 		return nil, errors.New("no files")
 	}
-	pipeReader, pipeWriter := io.Pipe()
-	w := bufio.NewWriter(pipeWriter)
-	go func() {
-		defer pipeWriter.Close()
-		w.WriteString(SchemaVersion)
+	var w bytes.Buffer
+	w.WriteString(SchemaVersion)
+	w.WriteString("\n")
+	for _, d := range d.Files {
+		w.WriteString(d.Line())
 		w.WriteString("\n")
-		for _, d := range d.Files {
-			w.WriteString(d.Line())
-			w.WriteString("\n")
-		}
-		w.Flush()
-	}()
+	}
 
-	return pipeReader, nil
+	return bytes.NewReader(w.Bytes()), nil
 }
 
 // ReadMetadata the document metadata from remote blob
@@ -115,7 +109,7 @@ func (d *BlobDoc) ReadMetadata(fileEntry *Entry, r RemoteStorage) error {
 
 		metadata := archive.MetadataFile{}
 
-		meta, err := r.GetReader(fileEntry.Hash)
+		meta, err := r.GetReader(fileEntry.Hash, fileEntry.DocumentID)
 		if err != nil {
 			return err
 		}
@@ -157,7 +151,7 @@ func (d *BlobDoc) Line() string {
 // Mirror updates the document to be the same as the remote
 func (d *BlobDoc) Mirror(e *Entry, r RemoteStorage) error {
 	d.Entry = *e
-	entryIndex, err := r.GetReader(e.Hash)
+	entryIndex, err := r.GetReader(e.Hash, e.DocumentID)
 	if err != nil {
 		return err
 	}

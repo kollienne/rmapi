@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -59,7 +58,7 @@ func (ft *FileTokenStore) Save(t TokenSet) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(ft.path(), content, 0600); err != nil {
+	if err := os.WriteFile(ft.path(), content, 0600); err != nil {
 		return err
 	}
 
@@ -74,7 +73,7 @@ func (ft *FileTokenStore) Load() (TokenSet, error) {
 		return TokenSet{}, nil
 	}
 
-	content, err := ioutil.ReadFile(ft.path())
+	content, err := os.ReadFile(ft.path())
 	if err != nil {
 		return TokenSet{}, err
 	}
