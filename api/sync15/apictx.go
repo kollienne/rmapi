@@ -46,7 +46,7 @@ func CreateCtx(http *transport.HttpClientCtx) (*ApiCtx, error) {
 	}
 	err = cacheTree.Mirror(apiStorage, concurrent)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to mirror %v", err)
 	}
 	saveTree(cacheTree)
 	tree := DocumentsFileTree(cacheTree)

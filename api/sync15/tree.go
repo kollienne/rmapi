@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/juruen/rmapi/log"
+	"github.com/juruen/rmapi/transport"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -167,7 +168,7 @@ func (t *HashTree) Rehash() error {
 // / Mirror makes the tree look like the storage
 func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 	rootHash, gen, err := r.GetRootIndex()
-	if err != nil {
+	if err != nil && err != transport.ErrNotFound {
 		return err
 	}
 	if rootHash == "" && gen == 0 {
@@ -184,7 +185,7 @@ func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 
 	rootIndexReader, err := r.GetReader(rootHash)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot get root hash %v", err)
 	}
 	defer rootIndexReader.Close()
 
@@ -245,7 +246,7 @@ func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 EXIT:
 	err = wg.Wait()
 	if err != nil {
-		return err
+		return fmt.Errorf("was not ok: %v", err)
 	}
 	sort.Slice(head, func(i, j int) bool { return head[i].DocumentID < head[j].DocumentID })
 	t.Docs = head
