@@ -16,7 +16,6 @@ import (
 	"github.com/juruen/rmapi/log"
 	"github.com/juruen/rmapi/model"
 	"github.com/juruen/rmapi/util"
-	"golang.org/x/net/http2"
 )
 
 type AuthType int
@@ -48,8 +47,7 @@ type HttpClientCtx struct {
 }
 
 func CreateHttpClientCtx(tokens model.AuthTokens) HttpClientCtx {
-	var httpClient = &http.Client{Timeout: 5 * 60 * time.Second,
-		Transport: &http2.Transport{}}
+	var httpClient = &http.Client{Timeout: 5 * 60 * time.Second}
 
 	return HttpClientCtx{httpClient, tokens}
 }
