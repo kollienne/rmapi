@@ -63,7 +63,7 @@ func mgetCmd(ctx *ShellCtxt) *ishell.Cmd {
 						idxDir = 1
 					}
 
-					fileName := fmt.Sprintf("%s.%s",currentNode.Name(), util.RMDOC)
+					fileName := fmt.Sprintf("%s.%s", currentNode.Name(), util.RMDOC)
 
 					dst := path.Join(target, filetree.BuildPath(currentPath[idxDir:], fileName))
 					fileMap[dst] = struct{}{}
