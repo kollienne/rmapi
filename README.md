@@ -1,9 +1,8 @@
 # rMAPI
 
-*Note: rMAPI is effectiviely unmaintaied at this point, and this repo will be archived in the next few weeks. Please see [this discussion for more info](https://github.com/juruen/rmapi/discussions/313).*
+because that the upstream project in archived, I'll keep maintaining it here
 
-[![Actions Status](https://github.com/juruen/rmapi/workflows/Go/badge.svg)](https://github.com/juruen/rmapi/actions)
-
+[![Actions Status](https://github.com/ddvk/rmapi/workflows/Go/badge.svg)](https://github.com/ddvk/rmapi/actions)
 
 
 rMAPI is a Go app that allows you to access the ReMarkable Cloud API programmatically.
@@ -18,24 +17,6 @@ taking automatic backups or uploading documents programmatically.
 # Some examples of use
 
 [Tutorial on how to directly print to your reMarkable on Mac with rMAPI](docs/tutorial-print-macosx.md)
-
-# Warning: experimental support for the new sync protocol
-
-If `rmapi` stopped working for you in a such way that `gets` were working fine but `puts` didn't seem to work, this
-is relevant for you.
-
-A few months ago, the `Remarkable` folks introduced a new sync protocol. This new protocol is being rolling out 
-incrementally. Some users are being forced to use it, and some other users are still using the old protocol that
-`rmapi` has supported well for a few years now.
-
-Unfortunately, the `rmapi` contributors are still on the old protocol and this makes it more difficult to test
-the new protocol's implementation. However, as we know that there are many users who would like to use
-`rmapi` with the new protocol, we have added experimental support for it. The always awesome @ddvk did all the work
-here!
-
-Although `rmapi` will warn you if it needs to use the new protocol, we'd like to take this opportunity again to reiterate that the
-support for the new protocol is experimental, and you should make sure you have a back-up of your files in case something goes wrong.
-
 
 # Install
 
@@ -98,7 +79,7 @@ docker run -v $HOME/.config/rmapi/:/home/app/.config/rmapi/ rmapi help
 # Shell ergonomics
 
 - [x] autocomplete
-- [ ] globbing
+- [x] globbing
 - [x] upload a directory and all its files and subdirectories recursively
 
 # Commands
@@ -145,7 +126,7 @@ Use `mput path_to_dir` to recursively upload all the local files to that directo
 E.g: upload all the files
 
 ```
-mput /Papers
+mput (-src sourcfolder) /Papers
 ```
 
 ![Console Capture](docs/mput-console.png)
@@ -158,10 +139,17 @@ Use `get path_to_file` to download a file from the cloud to your local computer.
 
 Use `mget path_to_dir` to recursively download all the files in that directory.
 
+Chech further options with (mget -h)
+
 E.g: download all the files
 
 ```
-mget .
+mget -o dstfolder /
+```
+Incremental mirror (deletes files not in the cloud so be careful with the output folder)
+
+```
+mget -o dstfolder -i -d /
 ```
 
 ## Download a file and generate a PDF with its annoations
