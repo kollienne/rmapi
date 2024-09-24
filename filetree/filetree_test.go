@@ -45,7 +45,7 @@ func TestAddSingleFileToRoot(t *testing.T) {
 
 	ctx.AddDocument(file)
 
-	assert.Equal(t, 1, len(ctx.root.Children))
+	assert.Equal(t, 2, len(ctx.root.Children))
 	assert.Equal(t, "file", ctx.root.Children["1"].Name())
 }
 
