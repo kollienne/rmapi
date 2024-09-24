@@ -51,6 +51,16 @@ func (ctx *FileTreeCtx) NodeById(id string) *model.Node {
 	}
 }
 
+// FinishAdd add all nodes with missing parents to root
+func (ctx *FileTreeCtx) FinishAdd() {
+	for parentId, pendingChildren := range ctx.pendingParent {
+		for childId := range pendingChildren {
+			ctx.idToNode[childId].Parent = ctx.root
+			ctx.root.Children[childId] = ctx.idToNode[childId]
+		}
+		delete(ctx.pendingParent, parentId)
+	}
+}
 func (ctx *FileTreeCtx) AddDocument(document *model.Document) {
 	node := model.CreateNode(*document)
 	nodeId := document.ID

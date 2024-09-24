@@ -10,19 +10,19 @@ import (
 )
 
 const (
-	PDF  = "pdf"
-	ZIP  = "zip"
-	RM   = "rm"
-	EPUB = "epub"
+	PDF   = "pdf"
+	ZIP   = "zip"
+	RM    = "rm"
+	EPUB  = "epub"
 	RMDOC = "rmdoc"
 )
 
 var supportedExt = map[string]bool{
 	EPUB: true,
 	PDF:  true,
-	ZIP:  true,
-	RM:   true,
-	RMDOC:   true,
+	// ZIP:  true,
+	RM:    true,
+	RMDOC: true,
 }
 
 func IsFileTypeSupported(ext string) bool {

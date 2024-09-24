@@ -133,6 +133,10 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 	lSize := len(dirList)
 	for index, d := range dirList {
 		name := d.Name()
+		var notify bool
+		if lSize-1 == index {
+			notify = true
+		}
 
 		if !pCtx.useHiddenFiles && strings.HasPrefix(d.Name(), ".") {
 			continue
@@ -146,7 +150,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 				// Directory does not exist. Create directory.
 				treeFormat(pC, depth, index, lSize, tFS)
 				pC.Printf("creating directory [%s]...", name)
-				doc, err := pCtx.api.CreateDir(pCtx.node.Id(), name, false)
+				doc, err := pCtx.api.CreateDir(pCtx.node.Id(), name, notify)
 
 				if err != nil {
 					pC.Err(errors.New(fmt.Sprint("failed to create directory", err)))
@@ -199,10 +203,10 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 				// Document does not exist.
 				treeFormat(pC, depth, index, lSize, tFS)
 				pC.Printf("uploading: [%s]...", name)
-				doc, err := pCtx.api.UploadDocument(pCtx.node.Id(), name, false)
+				doc, err := pCtx.api.UploadDocument(pCtx.node.Id(), name, notify)
 
 				if err != nil {
-					pC.Err(fmt.Errorf("failed to upload file %s", name))
+					pC.Err(fmt.Errorf("failed to upload file %s, %v", name, err))
 				} else {
 					// Document uploaded successfully.
 					pC.Println(" complete")
