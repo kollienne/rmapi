@@ -12,6 +12,7 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/juruen/rmapi/filetree"
 	"github.com/juruen/rmapi/model"
+	"github.com/juruen/rmapi/util"
 )
 
 func mgetCmd(ctx *ShellCtxt) *ishell.Cmd {
@@ -62,7 +63,7 @@ func mgetCmd(ctx *ShellCtxt) *ishell.Cmd {
 						idxDir = 1
 					}
 
-					fileName := currentNode.Name() + ".zip"
+					fileName := fmt.Sprintf("%s.%s",currentNode.Name(), util.RMDOC)
 
 					dst := path.Join(target, filetree.BuildPath(currentPath[idxDir:], fileName))
 					fileMap[dst] = struct{}{}

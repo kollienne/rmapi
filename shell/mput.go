@@ -10,7 +10,7 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/juruen/rmapi/log"
 	"github.com/juruen/rmapi/util"
-	flag "github.com/ogier/pflag"
+	"flag"
 )
 
 func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
@@ -20,7 +20,7 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 		Completer: createFsEntryCompleter(),
 		Func: func(c *ishell.Context) {
 			flagSet := flag.NewFlagSet("mput", flag.ContinueOnError)
-			src := flagSet.StringP("src", "s", "", "source dir")
+			src := flagSet.String("src", "", "source dir")
 
 			if err := flagSet.Parse(c.Args); err != nil {
 				if err != flag.ErrHelp {
@@ -41,6 +41,7 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 			}
 
 			dst := argRest[0]
+			fmt.Println("dest:", dst)
 
 			// Past this point, the number of arguments is 1.
 

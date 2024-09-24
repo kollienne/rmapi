@@ -37,7 +37,7 @@ func (d *DocumentFiles) AddMap(name, filepath string) {
 // Prepare prepares a file for uploading (creates needed temp files or unpacks a zip)
 func Prepare(name, parentId, sourceDocPath, ext, tmpDir string) (files *DocumentFiles, id string, err error) {
 	files = &DocumentFiles{}
-	if ext == util.ZIP {
+	if ext == util.ZIP || ext == util.RMDOC {
 		var metadataPath string
 		id, files, metadataPath, err = Unpack(sourceDocPath, tmpDir)
 		if err != nil {
