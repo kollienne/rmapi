@@ -21,16 +21,26 @@ func (ctx *FileTreeCtx) Clear() {
 	ctx.root.Children = nil
 }
 
+const TrashID = "trash"
+
 func CreateFileTreeCtx() FileTreeCtx {
 	root := model.CreateNode(model.Document{
 		ID:           "",
 		Type:         "CollectionType",
 		VissibleName: "/",
 	})
+	trash := model.CreateNode(model.Document{
+		ID:           TrashID,
+		Type:         "CollectionType",
+		VissibleName: "trash",
+	})
+	root.Children[TrashID] = &trash
 
 	return FileTreeCtx{
 		&root,
-		make(map[string]*model.Node),
+		map[string]*model.Node{
+			TrashID: &trash,
+		},
 		make(map[string]map[string]struct{}),
 	}
 }
@@ -51,6 +61,16 @@ func (ctx *FileTreeCtx) NodeById(id string) *model.Node {
 	}
 }
 
+// FinishAdd add all nodes with missing parents to root
+func (ctx *FileTreeCtx) FinishAdd() {
+	for parentId, pendingChildren := range ctx.pendingParent {
+		for childId := range pendingChildren {
+			ctx.idToNode[childId].Parent = ctx.root
+			ctx.root.Children[childId] = ctx.idToNode[childId]
+		}
+		delete(ctx.pendingParent, parentId)
+	}
+}
 func (ctx *FileTreeCtx) AddDocument(document *model.Document) {
 	node := model.CreateNode(*document)
 	nodeId := document.ID

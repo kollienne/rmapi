@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/juruen/rmapi/api/sync10"
 	"github.com/juruen/rmapi/api/sync15"
 	"github.com/juruen/rmapi/filetree"
 	"github.com/juruen/rmapi/model"
@@ -24,7 +23,7 @@ type ApiCtx interface {
 	DeleteEntry(node *model.Node, recursive, notify bool) error
 	SyncComplete() error
 	Nuke() error
-	Refresh() error
+	Refresh() (string, int64, error)
 }
 
 type UserToken struct {
@@ -39,7 +38,6 @@ type UserToken struct {
 type SyncVersion int
 
 const (
-	Version10 SyncVersion = 10
 	Version15 SyncVersion = 15
 )
 
@@ -71,7 +69,7 @@ func ParseToken(userToken string) (token *UserInfo, err error) {
 
 	token = &UserInfo{
 		User:        claims.Auth0.Email,
-		SyncVersion: Version10,
+		SyncVersion: Version15,
 	}
 
 	scopes := strings.Fields(claims.Scopes)
@@ -89,8 +87,6 @@ func ParseToken(userToken string) (token *UserInfo, err error) {
 // CreateApiCtx initializes an instance of ApiCtx
 func CreateApiCtx(httpCtx *transport.HttpClientCtx, syncVerison SyncVersion) (ctx ApiCtx, err error) {
 	switch syncVerison {
-	case Version10:
-		return sync10.CreateCtx(httpCtx)
 	case Version15:
 		return sync15.CreateCtx(httpCtx)
 	default:

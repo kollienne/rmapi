@@ -16,6 +16,7 @@ import (
 	"github.com/juruen/rmapi/log"
 	"github.com/juruen/rmapi/model"
 	"github.com/juruen/rmapi/util"
+	"golang.org/x/net/http2"
 )
 
 type AuthType int
@@ -47,7 +48,8 @@ type HttpClientCtx struct {
 }
 
 func CreateHttpClientCtx(tokens model.AuthTokens) HttpClientCtx {
-	var httpClient = &http.Client{Timeout: 5 * 60 * time.Second}
+	var httpClient = &http.Client{Timeout: 5 * 60 * time.Second,
+		Transport: &http2.Transport{}}
 
 	return HttpClientCtx{httpClient, tokens}
 }
@@ -108,8 +110,8 @@ func (ctx HttpClientCtx) Post(authType AuthType, url string, reqBody, resp inter
 	return ctx.httpRawReq(authType, http.MethodPost, url, reqBody, resp, nil)
 }
 
-func (ctx HttpClientCtx) Put(authType AuthType, url string, reqBody, resp interface{}) error {
-	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, resp, nil)
+func (ctx HttpClientCtx) Put(authType AuthType, url string, reqBody, resp interface{}, headers map[string]string) error {
+	return ctx.httpRawReq(authType, http.MethodPut, url, reqBody, resp, headers)
 }
 
 func (ctx HttpClientCtx) PutStream(authType AuthType, url string, reqBody io.Reader, name string) error {
@@ -179,6 +181,7 @@ func (ctx HttpClientCtx) httpRawReq(authType AuthType, verb, url string, reqBody
 		if err != nil {
 			return fmt.Errorf("cannot get content length")
 		}
+		headers["content-type"] = "application/octet-stream"
 		// headers["Content-Length"] = strconv.FormatInt(length, 10)
 		_, err = seeker.Seek(0, io.SeekStart)
 		if err != nil {
@@ -235,12 +238,19 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 		}
 	}
 
-	log.Trace.Println("---- start")
-	if log.TracingEnabled {
-		drequest, err := httputil.DumpRequest(request, true)
-		log.Trace.Printf("request: %s %v", string(drequest), err)
-	}
+	log.Trace.Println("---- start request ---- ")
 	request.ContentLength = length
+	if log.TracingEnabled {
+		withBody := true
+		if length > 300 {
+			withBody = false
+		}
+		drequest, err := httputil.DumpRequest(request, withBody)
+		log.Trace.Printf("request: %s %v", string(drequest), err)
+		if !withBody {
+			fmt.Println("body not logged")
+		}
+	}
 
 	response, err := ctx.Client.Do(request)
 
@@ -258,7 +268,7 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 	if response.StatusCode != http.StatusOK {
 		log.Trace.Printf("request failed with status %d\n", response.StatusCode)
 	}
-	log.Trace.Println("---- end")
+	log.Trace.Println("---- end request ----")
 
 	switch response.StatusCode {
 	case http.StatusOK:

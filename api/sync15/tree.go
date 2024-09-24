@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -80,11 +79,14 @@ func parseEntry(line string) (*Entry, error) {
 func parseIndex(f io.Reader) ([]*Entry, error) {
 	var entries []*Entry
 	scanner := bufio.NewScanner(f)
-	scanner.Scan()
+	eof := scanner.Scan()
+	if !eof {
+		return nil, fmt.Errorf("empty file")
+	}
 	schema := scanner.Text()
 
 	if schema != SchemaVersion {
-		return nil, errors.New("wrong schema")
+		return nil, fmt.Errorf("wrong schema got %s, expected: %s", schema, SchemaVersion)
 	}
 	for scanner.Scan() {
 		line := scanner.Text()

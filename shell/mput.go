@@ -142,6 +142,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 	lSize := len(dirList)
 	for index, d := range dirList {
 		name := d.Name()
+		notify := true
 
 		if !pCtx.useHiddenFiles && strings.HasPrefix(d.Name(), ".") {
 			continue
@@ -155,7 +156,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 				// Directory does not exist. Create directory.
 				treeFormat(pC, depth, index, lSize, tFS)
 				pC.Printf("creating directory [%s]...", name)
-				doc, err := pCtx.api.CreateDir(pCtx.node.Id(), name, false)
+				doc, err := pCtx.api.CreateDir(pCtx.node.Id(), name, notify)
 
 				if err != nil {
 					pC.Err(errors.New(fmt.Sprint("failed to create directory", err)))

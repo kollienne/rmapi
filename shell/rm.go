@@ -37,7 +37,7 @@ func rmCmd(ctx *ShellCtxt) *ishell.Cmd {
 				}
 				for _, node := range nodes {
 					c.Println("deleting: ", node.Name())
-					err = ctx.api.DeleteEntry(node, *recursive, false)
+					err = ctx.api.DeleteEntry(node, *recursive, true)
 
 					if err != nil {
 						c.Err(fmt.Errorf("failed to delete entry, %v", err))
