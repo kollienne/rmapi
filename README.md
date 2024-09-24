@@ -25,7 +25,7 @@ taking automatic backups or uploading documents programmatically.
 Install and build the project:
 
 ```
-git clone https://github.com/juruen/rmapi
+git clone https://github.com/ddvk/rmapi
 cd rmapi
 go install
 ```
