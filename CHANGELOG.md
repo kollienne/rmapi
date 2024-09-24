@@ -1,5 +1,11 @@
 ## rmapi master
 
+## rmapi 0.0.27 (September 24, 2024)
+- fix sync api
+- add rudimentary globbing for ls,rm
+- add trash folder
+- add orphaned files to root
+
 ## rmapi 0.0.24 (December 30, 2022)
 
 - Make sure Windows binaries have an exe extension (@juruen)
