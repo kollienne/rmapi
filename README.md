@@ -1,6 +1,6 @@
 # rMAPI
 
-because that the upstream project in archived, I'll keep maintaining it here
+because the upstream project was archived, I'll keep maintaining it here
 
 [![Actions Status](https://github.com/ddvk/rmapi/workflows/Go/badge.svg)](https://github.com/ddvk/rmapi/actions)
 
