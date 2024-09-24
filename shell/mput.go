@@ -7,10 +7,11 @@ import (
 	"path"
 	"strings"
 
+	"flag"
+
 	"github.com/abiosoft/ishell"
 	"github.com/juruen/rmapi/log"
 	"github.com/juruen/rmapi/util"
-	"flag"
 )
 
 func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
@@ -46,7 +47,6 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 			// Past this point, the number of arguments is 1.
 
 			node, err := ctx.api.Filetree().NodeByPath(dst, ctx.node)
-				
 
 			if err != nil || node.IsFile() {
 				c.Err(err)
@@ -209,11 +209,13 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			} else {
 				// Document does not exist.
 				treeFormat(pC, depth, index, lSize, tFS)
-				pC.Printf("uploading: [%s]...\n", name)
-				doc, err := pCtx.api.UploadDocument(pCtx.node.Id(), name, false)
+				pC.Printf("uploading: [%s]...", name)
+
+				fullName := path.Join(localDir, name)
+				doc, err := pCtx.api.UploadDocument(pCtx.node.Id(), fullName, false)
 
 				if err != nil {
-					pC.Err(fmt.Errorf("failed to upload file %s, %v", name, err))
+					pC.Err(fmt.Errorf("failed to upload file '%s', %v", name, err))
 				} else {
 					// Document uploaded successfully.
 					pC.Println(" complete")
