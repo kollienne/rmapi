@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -82,7 +82,7 @@ func (a *Auth) RegisterDevice(code string) error {
 		return errors.New("auth: can't register device")
 	}
 
-	bearer, err := ioutil.ReadAll(resp.Body)
+	bearer, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func renewToken(deviceToken string) (userToken string, err error) {
 		return "", fmt.Errorf("auth: can't renew token (HTTP %d)", resp.StatusCode)
 	}
 
-	bearer, err := ioutil.ReadAll(resp.Body)
+	bearer, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

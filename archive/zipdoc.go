@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/jpeg"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -73,13 +72,13 @@ func CreateZipDocument(id, srcPath string) (zipPath string, err error) {
 		return
 	}
 
-	doc, err := ioutil.ReadFile(srcPath)
+	doc, err := os.ReadFile(srcPath)
 	if err != nil {
 		log.Error.Println("failed to open source document file to read", err)
 		return
 	}
 	// Create document (pdf or epub) file
-	tmp, err := ioutil.TempFile("", "rmapizip")
+	tmp, err := os.CreateTemp("", "rmapizip")
 	if err != nil {
 		return
 	}
@@ -157,7 +156,7 @@ func CreateZipDocument(id, srcPath string) (zipPath string, err error) {
 }
 
 func CreateZipDirectory(id string) (string, error) {
-	tmp, err := ioutil.TempFile("", "rmapizip")
+	tmp, err := os.CreateTemp("", "rmapizip")
 
 	if err != nil {
 		log.Error.Println("failed to create tmpfile for zip dir", err)
@@ -230,7 +229,7 @@ func CreateContent(id, ext, fpath string, pageIds []string) (fileName, filePath 
 		}
 	}
 
-	err = ioutil.WriteFile(filePath, []byte(content), 0600)
+	err = os.WriteFile(filePath, []byte(content), 0600)
 	return
 }
 
@@ -257,6 +256,6 @@ func CreateMetadata(id, name, parent, colType, fpath string) (fileName string, f
 		return
 	}
 
-	err = ioutil.WriteFile(filePath, c, 0600)
+	err = os.WriteFile(filePath, c, 0600)
 	return
 }

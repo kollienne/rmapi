@@ -45,8 +45,6 @@ const (
 
 func (s SyncVersion) String() string {
 	switch s {
-	case Version10:
-		return "1.0"
 	case Version15:
 		return "1.5"
 	default:

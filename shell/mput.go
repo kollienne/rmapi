@@ -3,11 +3,12 @@ package shell
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/abiosoft/ishell"
+	"github.com/juruen/rmapi/log"
 	"github.com/juruen/rmapi/util"
 	flag "github.com/ogier/pflag"
 )
@@ -20,6 +21,7 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 		Func: func(c *ishell.Context) {
 			flagSet := flag.NewFlagSet("mput", flag.ContinueOnError)
 			src := flagSet.StringP("src", "s", "", "source dir")
+
 			if err := flagSet.Parse(c.Args); err != nil {
 				if err != flag.ErrHelp {
 					c.Err(err)
@@ -38,15 +40,12 @@ func mputCmd(ctx *ShellCtxt) *ishell.Cmd {
 				return
 			}
 
-			if argsLen > 1 {
-				c.Err(errors.New(("too many arguments for command mput")))
-				return
-			}
 			dst := argRest[0]
 
 			// Past this point, the number of arguments is 1.
 
 			node, err := ctx.api.Filetree().NodeByPath(dst, ctx.node)
+				
 
 			if err != nil || node.IsFile() {
 				c.Err(err)
@@ -132,7 +131,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 	}
 
 	wd := localDir
-	dirList, err := ioutil.ReadDir(wd)
+	dirList, err := os.ReadDir(wd)
 
 	if err != nil {
 		pC.Err(fmt.Errorf("could not read the directory: %s", wd))
@@ -147,9 +146,7 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			continue
 		}
 
-		switch mode := d.Mode(); {
-		case mode.IsDir():
-
+		if d.IsDir() {
 			// Is a directory. Create directory and make a recursive call.
 			_, err := pCtx.api.Filetree().NodeByPath(name, pCtx.node)
 
@@ -194,10 +191,9 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			// Reset.
 			pCtx.path = currCtxPath
 			pCtx.node = currCtxNode
-
-		case mode.IsRegular():
-
+		} else if d.Type().IsRegular() {
 			docName, ext := util.DocPathToName(name)
+			log.Trace.Printf("docname '%s'", name)
 
 			if !util.IsFileTypeSupported(ext) {
 				continue
@@ -212,11 +208,11 @@ func putFilesAndDirs(pCtx *ShellCtxt, pC *ishell.Context, localDir string, depth
 			} else {
 				// Document does not exist.
 				treeFormat(pC, depth, index, lSize, tFS)
-				pC.Printf("uploading: [%s]...", name)
+				pC.Printf("uploading: [%s]...\n", name)
 				doc, err := pCtx.api.UploadDocument(pCtx.node.Id(), name, false)
 
 				if err != nil {
-					pC.Err(fmt.Errorf("failed to upload file %s", name))
+					pC.Err(fmt.Errorf("failed to upload file %s, %v", name, err))
 				} else {
 					// Document uploaded successfully.
 					pC.Println(" complete")

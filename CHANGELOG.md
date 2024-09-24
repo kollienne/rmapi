@@ -1,3 +1,26 @@
+## rmapi master
+
+## rmapi 0.0.24 (December 30, 2022)
+
+- Make sure Windows binaries have an exe extension (@juruen)
+
+- Use go 1.19 (@juruen)
+
+## rmapi 0.0.23 (December 01, 2022)
+
+- sync 1.5: use parallel requests when getting remote tree (@ddvk)
+
+- fix syncomplete in mput (@ddvk)
+
+- update auth url (@ddvk)
+
+- Add support to nuke 1.5 (@ddvk)
+
+
+## rmapi 0.0.22 (October 05, 2022)
+
+- Update 1.5 sync URLs, implement v2 API (@ddvk)
+
 ## rmapi 0.0.21 (September 04, 2022)
 
 - Fix time conversion (@ddvk)

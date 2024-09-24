@@ -1,6 +1,6 @@
 module github.com/juruen/rmapi
 
-go 1.18
+go 1.19
 
 replace github.com/flynn-archive/go-shlex => github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 
@@ -32,8 +32,8 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/ogier/pflag v0.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
+	golang.org/x/image v0.5.0 // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

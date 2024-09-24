@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/abiosoft/ishell"
+	"github.com/juruen/rmapi/util"
 )
 
 func getCmd(ctx *ShellCtxt) *ishell.Cmd {
@@ -29,7 +30,7 @@ func getCmd(ctx *ShellCtxt) *ishell.Cmd {
 
 			c.Println(fmt.Sprintf("downloading: [%s]...", srcName))
 
-			err = ctx.api.FetchDocument(node.Document.ID, fmt.Sprintf("%s.zip", node.Name()))
+			err = ctx.api.FetchDocument(node.Document.ID, fmt.Sprintf("%s.%s", node.Name(), util.RMDOC))
 
 			if err == nil {
 				c.Println("OK")

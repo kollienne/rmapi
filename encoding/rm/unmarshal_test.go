@@ -2,12 +2,12 @@ package rm
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
 func testUnmarshalBinary(t *testing.T, fn string, ver Version) *Rm {
-	b, err := ioutil.ReadFile(fn)
+	b, err := os.ReadFile(fn)
 	if err != nil {
 		t.Errorf("can't open %s file", fn)
 	}

@@ -4,7 +4,6 @@
 package cloud
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -45,7 +44,7 @@ func TestUpload(t *testing.T) {
 func TestDownload(t *testing.T) {
 	cli := NewClient(auth.New().Client())
 
-	file, err := ioutil.TempFile("", "rmapi-test-*.zip")
+	file, err := os.CreateTemp("", "rmapi-test-*.zip")
 	if err != nil {
 		t.Fatalf("test: can't create temporary file: %v", err)
 	}

@@ -46,7 +46,7 @@ func CreateCtx(http *transport.HttpClientCtx) (*ApiCtx, error) {
 	}
 	err = cacheTree.Mirror(apiStorage, concurrent)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to mirror %v", err)
 	}
 	saveTree(cacheTree)
 	tree := DocumentsFileTree(cacheTree)
@@ -99,7 +99,7 @@ func (ctx *ApiCtx) FetchDocument(docId, dstPath string) error {
 	defer w.Close()
 	for _, f := range doc.Files {
 		log.Trace.Println("fetching document: ", f.DocumentID)
-		blobReader, err := ctx.blobStorage.GetReader(f.Hash)
+		blobReader, err := ctx.blobStorage.GetReader(f.Hash, f.DocumentID)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,8 @@ func (ctx *ApiCtx) CreateDir(parentId, name string, notify bool) (*model.Documen
 		if err != nil {
 			return nil, err
 		}
-		err = ctx.blobStorage.UploadBlob(hashStr, reader)
+		err = ctx.blobStorage.UploadBlob(hashStr, f.Name, reader)
+		reader.Close()
 
 		if err != nil {
 			return nil, err
@@ -187,8 +188,8 @@ func (ctx *ApiCtx) CreateDir(parentId, name string, notify bool) (*model.Documen
 	if err != nil {
 		return nil, err
 	}
-	defer indexReader.Close()
-	err = ctx.blobStorage.UploadBlob(doc.Hash, indexReader)
+	// defer indexReader.Close()
+	err = ctx.blobStorage.UploadBlob(doc.Hash, addSchema(doc.DocumentID), indexReader)
 	if err != nil {
 		return nil, err
 	}
@@ -230,11 +231,12 @@ func Sync(b *BlobStorage, tree *HashTree, operation func(t *HashTree) error) err
 		if err != nil {
 			return err
 		}
-		err = b.UploadBlob(tree.Hash, indexReader)
+		err = b.UploadBlob(tree.Hash, addSchema("root"), indexReader)
 		if err != nil {
 			return err
 		}
-		defer indexReader.Close()
+		// TODO
+		// defer indexReader.Close()
 
 		log.Info.Println("updating root, old gen: ", tree.Generation)
 
@@ -295,7 +297,7 @@ func (ctx *ApiCtx) MoveEntry(src, dstDir *model.Node, name string) (*model.Node,
 		if err != nil {
 			return err
 		}
-		doc.Metadata.Version += 1
+		doc.Metadata.Version++
 		doc.Metadata.DocName = name
 		doc.Metadata.Parent = dstDir.Id()
 		doc.Metadata.MetadataModified = true
@@ -314,7 +316,7 @@ func (ctx *ApiCtx) MoveEntry(src, dstDir *model.Node, name string) (*model.Node,
 			return err
 		}
 
-		err = ctx.blobStorage.UploadBlob(hashStr, reader)
+		err = ctx.blobStorage.UploadBlob(hashStr, doc.DocumentID, reader)
 
 		if err != nil {
 			return err
@@ -325,8 +327,8 @@ func (ctx *ApiCtx) MoveEntry(src, dstDir *model.Node, name string) (*model.Node,
 		if err != nil {
 			return err
 		}
-		defer indexReader.Close()
-		return ctx.blobStorage.UploadBlob(doc.Hash, indexReader)
+		// defer indexReader.Close()
+		return ctx.blobStorage.UploadBlob(doc.Hash, addSchema(doc.DocumentID), indexReader)
 	})
 
 	if err != nil {
@@ -386,7 +388,7 @@ func (ctx *ApiCtx) UploadDocument(parentId string, sourceDocPath string, notify 
 		if err != nil {
 			return nil, err
 		}
-		err = ctx.blobStorage.UploadBlob(hashStr, reader)
+		err = ctx.blobStorage.UploadBlob(hashStr, fileEntry.DocumentID, reader)
 
 		if err != nil {
 			return nil, err
@@ -400,8 +402,8 @@ func (ctx *ApiCtx) UploadDocument(parentId string, sourceDocPath string, notify 
 	if err != nil {
 		return nil, err
 	}
-	defer indexReader.Close()
-	err = ctx.blobStorage.UploadBlob(doc.Hash, indexReader)
+	// defer indexReader.Close()
+	err = ctx.blobStorage.UploadBlob(doc.Hash, addSchema(doc.DocumentID), indexReader)
 	if err != nil {
 		return nil, err
 	}
