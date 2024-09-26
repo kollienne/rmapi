@@ -28,7 +28,7 @@ func CreateNode(document Document) Node {
 }
 
 func (node *Node) Name() string {
-	return node.Document.VissibleName
+	return node.Document.Name
 }
 
 func (node *Node) Id() string {

@@ -425,14 +425,10 @@ func DocumentsFileTree(tree *HashTree) *filetree.FileTreeCtx {
 	fileTree := filetree.CreateFileTreeCtx()
 
 	for _, d := range documents {
-		log.Trace.Println("adding doc: ", d.ID)
+		log.Trace.Printf("adding: %s docid: %s ", d.Name, d.ID)
 		fileTree.AddDocument(d)
 	}
 	fileTree.FinishAdd()
-
-	for _, d := range fileTree.Root().Children {
-		log.Trace.Println(d.Name(), d.IsFile())
-	}
 
 	return &fileTree
 }

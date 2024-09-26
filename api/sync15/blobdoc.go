@@ -214,7 +214,7 @@ func (d *BlobDoc) ToDocument() *model.Document {
 	}
 	return &model.Document{
 		ID:             d.DocumentID,
-		VissibleName:   d.Metadata.DocName,
+		Name:           d.Metadata.DocName,
 		Version:        d.Metadata.Version,
 		Parent:         d.Metadata.Parent,
 		Type:           d.Metadata.CollectionType,

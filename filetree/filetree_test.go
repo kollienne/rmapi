@@ -21,7 +21,7 @@ func createEntry(id, parent, name string, collection bool) *model.Document {
 		t = "DocumentType"
 	}
 
-	return &model.Document{ID: id, Parent: parent, VissibleName: name, Type: t}
+	return &model.Document{ID: id, Parent: parent, Name: name, Type: t}
 }
 
 func createFile(id, parent, name string) *model.Document {
