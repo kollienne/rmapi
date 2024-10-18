@@ -32,7 +32,7 @@ go install
 
 ## Binary
 
-You can download an already built version for either Linux or OSX from [releases](https://github.com/juruen/rmapi/releases).
+You can download an already built version for either Linux or OSX from [releases](https://github.com/ddvk/rmapi/releases/).
 
 ## Docker
 
