@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"sort"
 	"strconv"
@@ -158,7 +159,7 @@ func (d *BlobDoc) Mirror(e *Entry, r RemoteStorage) error {
 	defer entryIndex.Close()
 	entries, err := parseIndex(entryIndex)
 	if err != nil {
-		return err
+		return fmt.Errorf("blobdoc index error %v", err)
 	}
 
 	head := make([]*Entry, 0)

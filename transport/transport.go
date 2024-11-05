@@ -101,6 +101,12 @@ func (ctx HttpClientCtx) GetStream(authType AuthType, url string, name string) (
 		respBody = response.Body
 	}
 
+	if log.TracingEnabled {
+		defer response.Body.Close()
+		dresponse, err := httputil.DumpResponse(response, true)
+		log.Trace.Printf("%s %v", string(dresponse), err)
+	}
+
 	return respBody, err
 }
 

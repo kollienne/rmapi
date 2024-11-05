@@ -90,6 +90,10 @@ func parseIndex(f io.Reader) ([]*Entry, error) {
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
+		if line == "" {
+			log.Warning.Printf("TODO: empty line in index file, ignored")
+			continue
+		}
 		entry, err := parseEntry(line)
 		if err != nil {
 			return nil, fmt.Errorf("cant parse line '%s', %w", line, err)
@@ -193,7 +197,7 @@ func (t *HashTree) Mirror(r RemoteStorage, maxconcurrent int) error {
 
 	entries, err := parseIndex(rootIndexReader)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot parse rootIndex, %v", err)
 	}
 
 	head := make([]*BlobDoc, 0)
@@ -274,7 +278,10 @@ func BuildTree(provider RemoteStorage) (*HashTree, error) {
 	}
 
 	defer rootIndex.Close()
-	entries, _ := parseIndex(rootIndex)
+	entries, err := parseIndex(rootIndex)
+	if err != nil {
+		return nil, fmt.Errorf("build tree root index error %v", err)
+	}
 
 	for _, e := range entries {
 		f, _ := provider.GetReader(e.Hash, e.DocumentID)
