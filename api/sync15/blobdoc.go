@@ -64,6 +64,7 @@ func (d *BlobDoc) MetadataHashAndReader() (hash string, reader io.Reader, err er
 	for _, f := range d.Files {
 		if strings.HasSuffix(f.DocumentID, ".metadata") {
 			f.Hash = hash
+			f.Size = int64(len(jsn))
 			found = true
 			break
 		}
