@@ -31,7 +31,7 @@ func FileHashAndSize(file string) ([]byte, int64, error) {
 	hasher := sha256.New()
 	io.Copy(hasher, f)
 	h := hasher.Sum(nil)
-	size, err := f.Seek(0, os.SEEK_CUR)
+	size, err := f.Seek(0, io.SeekCurrent)
 	return h, size, err
 
 }

@@ -78,6 +78,11 @@ func (d *BlobDoc) MetadataHashAndReader() (hash string, reader io.Reader, err er
 
 func (d *BlobDoc) AddFile(e *Entry) error {
 	d.Files = append(d.Files, e)
+	size := int64(0)
+	for _, f := range d.Files {
+		size += f.Size
+	}
+	d.Size = size
 	return d.Rehash()
 }
 
@@ -146,7 +151,7 @@ func (d *BlobDoc) Line() string {
 	numFilesStr := strconv.Itoa(len(d.Files))
 	sb.WriteString(numFilesStr)
 	sb.WriteRune(Delimiter)
-	sb.WriteString("0")
+	sb.WriteString(strconv.FormatInt(d.Size,10))
 	return sb.String()
 }
 

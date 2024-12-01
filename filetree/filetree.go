@@ -120,6 +120,7 @@ func (ctx *FileTreeCtx) MoveNode(src, dst *model.Node) {
 	src.Document.Name = dst.Document.Name
 	src.Document.Version = dst.Document.Version
 	src.Document.ModifiedClient = dst.Document.ModifiedClient
+	src.Document.Parent = dst.Parent.Document.ID
 
 	if src.Parent != dst.Parent {
 		delete(src.Parent.Children, src.Id())
