@@ -151,7 +151,7 @@ func (d *BlobDoc) Line() string {
 	numFilesStr := strconv.Itoa(len(d.Files))
 	sb.WriteString(numFilesStr)
 	sb.WriteRune(Delimiter)
-	sb.WriteString(strconv.FormatInt(d.Size,10))
+	sb.WriteString(strconv.FormatInt(d.Size, 10))
 	return sb.String()
 }
 
