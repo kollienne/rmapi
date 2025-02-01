@@ -269,14 +269,14 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 		log.Trace.Printf("%s %v", string(dresponse), err)
 	}
 
-	if response.StatusCode != http.StatusOK {
+	if IsHTTPStatusOK(response.StatusCode) {
+		return response, nil
+	} else {
 		log.Trace.Printf("request failed with status %d\n", response.StatusCode)
 	}
 	log.Trace.Println("---- end request ----")
 
 	switch response.StatusCode {
-	case http.StatusOK:
-		return response, nil
 	case http.StatusUnauthorized:
 		return response, ErrUnauthorized
 	case http.StatusConflict:
@@ -285,5 +285,15 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 		return response, ErrWrongGeneration
 	default:
 		return response, fmt.Errorf("request failed with status %d", response.StatusCode)
+	}
+}
+
+// IsHTTPStatusOK if the status is ok
+func IsHTTPStatusOK(status int) bool {
+	switch status {
+	case http.StatusOK, http.StatusAccepted, http.StatusCreated:
+		return true
+	default:
+		return false
 	}
 }
