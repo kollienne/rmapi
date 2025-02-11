@@ -95,19 +95,10 @@ func (ctx HttpClientCtx) GetStream(authType AuthType, url string, name string) (
 		RmFileNameHeader: name,
 	}
 	response, err := ctx.Request(authType, http.MethodGet, url, strings.NewReader(""), headers, 0)
-
-	var respBody io.ReadCloser
-	if response != nil {
-		respBody = response.Body
+	if err != nil {
+		return nil, err
 	}
-
-	if log.TracingEnabled {
-		defer response.Body.Close()
-		dresponse, err := httputil.DumpResponse(response, true)
-		log.Trace.Printf("%s %v", string(dresponse), err)
-	}
-
-	return respBody, err
+	return response.Body, err
 }
 
 func (ctx HttpClientCtx) Post(authType AuthType, url string, reqBody, resp interface{}) error {
@@ -270,11 +261,11 @@ func (ctx HttpClientCtx) Request(authType AuthType, verb, url string, body io.Re
 	}
 
 	if IsHTTPStatusOK(response.StatusCode) {
+		log.Trace.Println("---- end request ----")
 		return response, nil
 	} else {
 		log.Trace.Printf("request failed with status %d\n", response.StatusCode)
 	}
-	log.Trace.Println("---- end request ----")
 
 	switch response.StatusCode {
 	case http.StatusUnauthorized:
