@@ -16,7 +16,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const SchemaVersion = "3"
+const SchemaVersionV3 = "3"
+const SchemaVersionV4 = "4"
+
 const DocType = "80000000"
 const FileType = "0"
 const Delimiter = ':'
@@ -76,37 +78,79 @@ func parseEntry(line string) (*Entry, error) {
 	return &entry, nil
 }
 
+func parseSchemaV4(line string) (entriesCount int, totalSize int64, err error) {
+	r := NewFieldReader(line)
+	_, _ = r.Next()                //0
+	_, _ = r.Next()                //.
+	entriesCountStr, _ := r.Next() //count?
+	totalSizeStr, _ := r.Next()    //size?
+
+	entriesCount, err = strconv.Atoi(entriesCountStr)
+	if err != nil {
+		return
+	}
+	totalSize, err = strconv.ParseInt(totalSizeStr, 10, 64)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func parseIndex(f io.Reader) ([]*Entry, error) {
 	var entries []*Entry
 	scanner := bufio.NewScanner(f)
 	eof := scanner.Scan()
 	if !eof {
-		return nil, fmt.Errorf("empty file")
+		return nil, fmt.Errorf("empty index file")
 	}
 	schema := scanner.Text()
+	expectedCount := 0
+	count := 0
+	var err error
+	switch schema {
 
-	if schema != SchemaVersion {
-		return nil, fmt.Errorf("wrong schema got %s, expected: %s", schema, SchemaVersion)
-	}
-	for scanner.Scan() {
+	case SchemaVersionV4:
+		eof := scanner.Scan()
+		if !eof {
+			return nil, fmt.Errorf("expecting a schema v4 line")
+		}
 		line := scanner.Text()
-		if line == "" {
-			log.Warning.Printf("TODO: empty line in index file, ignored")
-			continue
-		}
-		entry, err := parseEntry(line)
+		expectedCount, _, err = parseSchemaV4(line)
 		if err != nil {
-			return nil, fmt.Errorf("cant parse line '%s', %w", line, err)
+			return nil, fmt.Errorf("can't parse v4 line %v", err)
 		}
+		fallthrough
+	case SchemaVersionV3:
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				log.Warning.Printf("TODO: empty line in index file, ignored")
+				continue
+			}
+			count++
+			entry, err := parseEntry(line)
+			if err != nil {
+				return nil, fmt.Errorf("cant parse line '%s', %w", line, err)
+			}
 
-		entries = append(entries, entry)
+			entries = append(entries, entry)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported schema %s", schema)
 	}
+	if schema == SchemaVersionV4 {
+		if count != expectedCount {
+			log.Warning.Printf("entries mismatch, expected %d, but was %d", expectedCount, count)
+		}
+	}
+
 	return entries, nil
 }
 
 func (t *HashTree) IndexReader() (io.Reader, error) {
 	var w bytes.Buffer
-	w.WriteString(SchemaVersion)
+	w.WriteString(SchemaVersionV3)
 	w.WriteString("\n")
 	for _, d := range t.Docs {
 		w.WriteString(d.Line())

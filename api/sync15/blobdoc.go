@@ -99,7 +99,7 @@ func (d *BlobDoc) IndexReader() (io.Reader, error) {
 		return nil, errors.New("no files")
 	}
 	var w bytes.Buffer
-	w.WriteString(SchemaVersion)
+	w.WriteString(SchemaVersionV3)
 	w.WriteString("\n")
 	for _, d := range d.Files {
 		w.WriteString(d.Line())
